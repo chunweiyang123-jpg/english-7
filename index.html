@@ -1,0 +1,1110 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>视频分享平台 - 一键下载项目</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js">
+    </script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js">
+    </script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            background: #0f172a;
+            color: #f1f5f9;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 1.5rem;
+        }
+        .card {
+            background: #1e293b;
+            border-radius: 24px;
+            padding: 2.5rem;
+            max-width: 800px;
+            width: 100%;
+            border: 1px solid #334155;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+        }
+        .card h1 {
+            font-size: 1.8rem;
+            margin-bottom: 0.3rem;
+            background: linear-gradient(135deg, #60b0ff, #a78bfa);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+        .card .subtitle {
+            color: #94a3b8;
+            font-size: 0.9rem;
+            margin-bottom: 1.8rem;
+            border-bottom: 1px solid #334155;
+            padding-bottom: 1rem;
+        }
+        .file-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.4rem;
+            margin-bottom: 2rem;
+            max-height: 400px;
+            overflow-y: auto;
+            padding-right: 0.5rem;
+        }
+        .file-list::-webkit-scrollbar {
+            width: 6px;
+        }
+        .file-list::-webkit-scrollbar-track {
+            background: #0f172a;
+            border-radius: 10px;
+        }
+        .file-list::-webkit-scrollbar-thumb {
+            background: #475569;
+            border-radius: 10px;
+        }
+        .file-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #0f172a;
+            padding: 0.5rem 1rem;
+            border-radius: 10px;
+            font-size: 0.85rem;
+            border: 1px solid #1e293b;
+            transition: 0.2s;
+        }
+        .file-item:hover {
+            border-color: #334155;
+        }
+        .file-item .name {
+            font-weight: 500;
+            font-family: 'Courier New', monospace;
+        }
+        .file-item .size {
+            color: #94a3b8;
+            font-size: 0.7rem;
+        }
+        .file-item .badge {
+            background: #2b7be4;
+            padding: 0.05rem 0.5rem;
+            border-radius: 30px;
+            font-size: 0.6rem;
+            color: white;
+        }
+        .file-item .badge.html {
+            background: #e44d26;
+        }
+        .file-item .badge.js {
+            background: #f7df1e;
+            color: #1a1a1a;
+        }
+        .file-item .badge.json {
+            background: #6c5b7b;
+        }
+        .file-item .badge.env {
+            background: #4caf50;
+        }
+        .file-item .badge.docker {
+            background: #2496ed;
+        }
+        .file-item .badge.yml {
+            background: #0052cc;
+        }
+        .file-item .badge.conf {
+            background: #8b5cf6;
+        }
+        .file-item .badge.md {
+            background: #6b7280;
+        }
+        .download-btn {
+            width: 100%;
+            padding: 1rem;
+            background: linear-gradient(135deg, #2b7be4, #7c3aed);
+            color: white;
+            border: none;
+            border-radius: 14px;
+            font-size: 1.2rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.8rem;
+        }
+        .download-btn:hover {
+            transform: scale(0.98);
+            box-shadow: 0 8px 30px rgba(43, 123, 228, 0.3);
+        }
+        .download-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+        .status {
+            text-align: center;
+            margin-top: 1rem;
+            font-size: 0.85rem;
+            color: #94a3b8;
+            min-height: 1.8rem;
+        }
+        .status.success {
+            color: #4caf50;
+        }
+        .status.error {
+            color: #ef4444;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 1.5rem;
+            font-size: 0.7rem;
+            color: #475569;
+        }
+        .count {
+            color: #94a3b8;
+            font-size: 0.8rem;
+        }
+        @media (max-width: 600px) {
+            .card {
+                padding: 1.5rem;
+            }
+            .file-item {
+                font-size: 0.75rem;
+                padding: 0.4rem 0.7rem;
+                flex-wrap: wrap;
+                gap: 0.3rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h1>📦 视频分享平台</h1>
+        <div class="subtitle">一键下载完整项目源码</div>
+
+        <div class="file-list" id="fileList">
+            <!-- 由 JS 动态渲染 -->
+        </div>
+
+        <button class="download-btn" id="downloadBtn">
+            ⬇️ 一键下载全部项目
+        </button>
+        <div class="status" id="status">准备就绪，点击下载</div>
+        <div class="footer">包含 9 个文件 · 开箱即用 · Node.js + Express + SQLite</div>
+    </div>
+
+    <script>
+        // ============================================================
+        //  项目所有文件内容（完整源码）
+        // ============================================================
+
+        const FILES = {
+
+            // ---------- server.js ----------
+            'server.js': {
+                content: `// ============================================================
+        // 视频分享网站 - 后端服务
+        // 技术栈: Node.js + Express + SQLite3 + Multer
+        // ============================================================
+
+        const express = require('express');
+        const multer = require('multer');
+        const sqlite3 = require('sqlite3').verbose();
+        const path = require('path');
+        const fs = require('fs');
+        const cors = require('cors');
+        const helmet = require('helmet');
+        require('dotenv').config();
+
+        const app = express();
+        const PORT = process.env.PORT || 3000;
+
+        // ---------- 安全中间件 ----------
+        app.use(helmet({
+          crossOriginResourcePolicy: { policy: "cross-origin" }
+        }));
+        app.use(cors());
+        app.use(express.json());
+        app.use(express.urlencoded({ extended: true }));
+
+        // ---------- 静态资源 ----------
+        app.use(express.static('public'));
+        app.use('/uploads', express.static('uploads'));
+
+        // ---------- 数据库初始化 ----------
+        const DB_PATH = process.env.DB_PATH || './data.db';
+        const db = new sqlite3.Database(DB_PATH);
+
+        db.serialize(() => {
+          db.run(\`
+            CREATE TABLE IF NOT EXISTS videos (
+              id TEXT PRIMARY KEY,
+              title TEXT NOT NULL,
+              description TEXT,
+              category TEXT,
+              difficulty TEXT,
+              filename TEXT NOT NULL,
+              fileType TEXT,
+              size INTEGER,
+              uploadTime TEXT,
+              views INTEGER DEFAULT 0,
+              notes TEXT
+            )
+          \`);
+        });
+
+        // ---------- 文件上传配置 ----------
+        const UPLOAD_DIR = process.env.UPLOAD_DIR || './uploads';
+        if (!fs.existsSync(UPLOAD_DIR)) fs.mkdirSync(UPLOAD_DIR, { recursive: true });
+
+        const storage = multer.diskStorage({
+          destination: (req, file, cb) => cb(null, UPLOAD_DIR),
+          filename: (req, file, cb) => {
+            const unique = Date.now() + '-' + Math.round(Math.random() * 1E9);
+            const ext = path.extname(file.originalname);
+            cb(null, unique + ext);
+          }
+        });
+
+        const upload = multer({
+          storage,
+          limits: { fileSize: parseInt(process.env.MAX_FILE_SIZE) || 500 * 1024 * 1024 },
+          fileFilter: (req, file, cb) => {
+            const allowed = ['video/mp4', 'video/webm', 'video/quicktime', 'video/x-msvideo', 'video/x-matroska'];
+            if (allowed.includes(file.mimetype)) cb(null, true);
+            else cb(new Error('不支持的视频格式'), false);
+          }
+        });
+
+        // ---------- API 路由 ----------
+
+        // 1. 获取所有视频
+        app.get('/api/videos', (req, res) => {
+          db.all('SELECT * FROM videos ORDER BY uploadTime DESC', (err, rows) => {
+            if (err) return res.status(500).json({ error: err.message });
+            res.json(rows);
+          });
+        });
+
+        // 2. 上传视频（管理员）
+        app.post('/api/upload', upload.single('video'), (req, res) => {
+          const { title, description, category, difficulty } = req.body;
+          const file = req.file;
+          if (!title || !file) {
+            return res.status(400).json({ error: '请填写标题并选择视频文件' });
+          }
+
+          const id = Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 6);
+          const videoData = {
+            id,
+            title,
+            description: description || '',
+            category: category || '其他',
+            difficulty: difficulty || '中级',
+            filename: file.filename,
+            fileType: file.mimetype,
+            size: file.size,
+            uploadTime: new Date().toISOString(),
+            views: 0,
+            notes: ''
+          };
+
+          const sql = \`INSERT INTO videos 
+            (id, title, description, category, difficulty, filename, fileType, size, uploadTime, views, notes)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)\`;
+
+          db.run(sql, [
+            videoData.id, videoData.title, videoData.description, videoData.category,
+            videoData.difficulty, videoData.filename, videoData.fileType, videoData.size,
+            videoData.uploadTime, videoData.views, videoData.notes
+          ], (err) => {
+            if (err) {
+              fs.unlinkSync(path.join(UPLOAD_DIR, file.filename));
+              return res.status(500).json({ error: err.message });
+            }
+            res.json({ success: true, video: videoData });
+          });
+        });
+
+        // 3. 删除视频（管理员）
+        app.delete('/api/videos/:id', (req, res) => {
+          const { id } = req.params;
+          db.get('SELECT filename FROM videos WHERE id = ?', [id], (err, row) => {
+            if (err) return res.status(500).json({ error: err.message });
+            if (!row) return res.status(404).json({ error: '视频不存在' });
+
+            const filePath = path.join(UPLOAD_DIR, row.filename);
+            if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+
+            db.run('DELETE FROM videos WHERE id = ?', [id], (err2) => {
+              if (err2) return res.status(500).json({ error: err2.message });
+              res.json({ success: true });
+            });
+          });
+        });
+
+        // 4. 更新学习笔记
+        app.put('/api/videos/:id/notes', (req, res) => {
+          const { id } = req.params;
+          const { notes } = req.body;
+          db.run('UPDATE videos SET notes = ? WHERE id = ?', [notes, id], (err) => {
+            if (err) return res.status(500).json({ error: err.message });
+            res.json({ success: true });
+          });
+        });
+
+        // 5. 增加播放次数
+        app.post('/api/videos/:id/view', (req, res) => {
+          const { id } = req.params;
+          db.run('UPDATE videos SET views = views + 1 WHERE id = ?', [id], (err) => {
+            if (err) return res.status(500).json({ error: err.message });
+            res.json({ success: true });
+          });
+        });
+
+        // 6. 管理员登录验证
+        app.post('/api/admin/login', (req, res) => {
+          const { password } = req.body;
+          const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'admin123';
+          if (password === ADMIN_PASSWORD) {
+            res.json({ success: true });
+          } else {
+            res.status(401).json({ error: '密码错误' });
+          }
+        });
+
+        // ---------- 启动服务器 ----------
+        app.listen(PORT, () => {
+          console.log(\`🚀 服务器运行在 http://localhost:\${PORT}\`);
+          console.log(\`🔐 管理员密码: \${process.env.ADMIN_PASSWORD || 'admin123'}\`);
+          console.log(\`📁 上传目录: \${UPLOAD_DIR}\`);
+        });`,
+                type: 'js'
+            },
+
+            // ---------- package.json ----------
+            'package.json': {
+                content: `{
+          "name": "video-sharing-platform",
+          "version": "1.0.0",
+          "description": "全球视频分享平台 - 管理员上传，用户观看下载",
+          "main": "server.js",
+          "scripts": {
+            "start": "node server.js",
+            "dev": "nodemon server.js"
+          },
+          "dependencies": {
+            "cors": "^2.8.5",
+            "dotenv": "^16.3.1",
+            "express": "^4.18.2",
+            "helmet": "^7.0.0",
+            "multer": "^1.4.5-lts.1",
+            "sqlite3": "^5.1.6"
+          },
+          "devDependencies": {
+            "nodemon": "^3.0.1"
+          }
+        }`,
+                type: 'json'
+            },
+
+            // ---------- .env.example ----------
+            '.env.example': {
+                content: `# 服务器端口
+        PORT=3000
+
+        # 管理员密码（务必修改）
+        ADMIN_PASSWORD=admin123
+
+        # 上传文件存储目录
+        UPLOAD_DIR=./uploads
+
+        # 单个文件大小限制（字节） 500MB
+        MAX_FILE_SIZE=524288000
+
+        # 数据库文件路径
+        DB_PATH=./data.db`,
+                type: 'env'
+            },
+
+            // ---------- Dockerfile ----------
+            'Dockerfile': {
+                content: `FROM node:18-alpine
+
+        WORKDIR /app
+
+        COPY package*.json ./
+        RUN npm install --production
+
+        COPY . .
+
+        RUN mkdir -p uploads
+
+        EXPOSE 3000
+
+        CMD ["node", "server.js"]`,
+                type: 'docker'
+            },
+
+            // ---------- docker-compose.yml ----------
+            'docker-compose.yml': {
+                content: `version: '3.8'
+
+        services:
+          video-platform:
+            build: .
+            container_name: video-sharing
+            restart: unless-stopped
+            ports:
+              - "3000:3000"
+            environment:
+              - PORT=3000
+              - ADMIN_PASSWORD=admin123
+              - UPLOAD_DIR=./uploads
+              - MAX_FILE_SIZE=524288000
+            volumes:
+              - ./uploads:/app/uploads
+              - ./data.db:/app/data.db`,
+                type: 'yml'
+            },
+
+            // ---------- nginx.conf.example ----------
+            'nginx.conf.example': {
+                content: `server {
+            listen 80;
+            server_name your-domain.com;
+            return 301 https://$server_name$request_uri;
+        }
+
+        server {
+            listen 443 ssl http2;
+            server_name your-domain.com;
+
+            ssl_certificate /etc/letsencrypt/live/your-domain.com/fullchain.pem;
+            ssl_certificate_key /etc/letsencrypt/live/your-domain.com/privkey.pem;
+
+            client_max_body_size 500M;
+
+            location / {
+                proxy_pass http://localhost:3000;
+                proxy_http_version 1.1;
+                proxy_set_header Upgrade $http_upgrade;
+                proxy_set_header Connection 'upgrade';
+                proxy_set_header Host $host;
+                proxy_cache_bypass $http_upgrade;
+                proxy_set_header X-Real-IP $remote_addr;
+                proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                proxy_set_header X-Forwarded-Proto $scheme;
+                proxy_buffering off;
+            }
+
+            location /uploads/ {
+                alias /path/to/your/uploads/;
+                add_header Content-Disposition "inline";
+                add_header Accept-Ranges bytes;
+            }
+        }`,
+                type: 'conf'
+            },
+
+            // ---------- video-sharing.service ----------
+            'video-sharing.service': {
+                content: `[Unit]
+        Description=Video Sharing Platform
+        After=network.target
+
+        [Service]
+        Type=simple
+        User=www-data
+        WorkingDirectory=/var/www/video-sharing
+        ExecStart=/usr/bin/node /var/www/video-sharing/server.js
+        Restart=on-failure
+        RestartSec=10
+        Environment=NODE_ENV=production
+
+        [Install]
+        WantedBy=multi-user.target`,
+                type: 'conf'
+            },
+
+            // ---------- README.md ----------
+            'README.md': {
+                content: `# 🎬 视频分享平台 - 部署指南
+
+        ## 功能特点
+        - 管理员上传视频（支持 mp4, webm, mov, avi, mkv）
+        - 全球用户在线观看、下载
+        - 分类筛选、实时搜索、播放计数
+        - 共享学习笔记
+        - 响应式设计
+
+        ## 快速开始
+
+        ### 1. 安装依赖
+        \`\`\`bash
+        npm install
+        \`\`\`
+
+        ### 2. 配置环境变量
+        复制 \`.env.example\` 为 \`.env\`，修改密码等参数。
+
+        ### 3. 启动服务
+        \`\`\`bash
+        npm start
+        # 或开发模式（自动重启）
+        npm run dev
+        \`\`\`
+
+        ### 4. 访问
+        浏览器打开 \`http://localhost:3000\`
+
+        ---
+
+        ## 生产部署
+
+        ### 使用 Docker
+        \`\`\`bash
+        docker build -t video-sharing .
+        docker run -d -p 3000:3000 -v $(pwd)/uploads:/app/uploads -v $(pwd)/data.db:/app/data.db --name video-share video-sharing
+        \`\`\`
+
+        或使用 docker-compose：
+        \`\`\`bash
+        docker-compose up -d
+        \`\`\`
+
+        ### 使用 systemd
+        1. 复制代码到 \`/var/www/video-sharing\`
+        2. 安装依赖：\`npm install --production\`
+        3. 修改 \`.env\`
+        4. 复制 \`video-sharing.service\` 到 \`/etc/systemd/system/\`
+        5. 启动：
+        \`\`\`bash
+        sudo systemctl daemon-reload
+        sudo systemctl enable video-sharing
+        sudo systemctl start video-sharing
+        \`\`\`
+
+        ### Nginx + SSL
+        参考 \`nginx.conf.example\` 配置反向代理，使用 Certbot 申请 SSL 证书。
+
+        ---
+
+        ## 存储方案切换
+        默认本地存储，如需使用云存储（阿里云 OSS / AWS S3），需修改 \`server.js\` 中的上传逻辑。
+
+        ---
+
+        ## 常见问题
+        - **上传失败**：检查文件大小限制和目录权限。
+        - **视频无法播放**：确认浏览器支持格式，或转码为 mp4 (H.264)。
+        - **播放次数不更新**：检查浏览器控制台网络请求。
+
+        ---
+
+        ## 许可证
+        MIT`,
+                type: 'md'
+            },
+
+            // ---------- public/index.html ----------
+            'public/index.html': {
+                content: `<!DOCTYPE html>
+        <html lang="zh-CN">
+        <head>
+          <meta charset="UTF-8" />
+          <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+          <title>视频分享 · 全球学习平台</title>
+          <style>
+            /* ===== 全局样式 ===== */
+            * { margin:0; padding:0; box-sizing:border-box; }
+            body { font-family: system-ui, -apple-system, sans-serif; background: #f0f7ff; color: #1a2a3a; min-height:100vh; }
+            a { text-decoration:none; color:inherit; }
+            .container { max-width:1400px; margin:0 auto; padding:0 1rem; }
+
+            /* ===== 头部 ===== */
+            .header { background: #1a3a5c; color: white; padding:0.8rem 1.2rem; display:flex; flex-wrap:wrap; align-items:center; gap:0.8rem; position:sticky; top:0; z-index:100; box-shadow:0 2px 8px rgba(0,0,0,0.2); }
+            .logo { font-size:1.3rem; font-weight:700; display:flex; align-items:center; gap:0.4rem; }
+            .logo span { background:linear-gradient(135deg,#60b0ff,#a78bfa); -webkit-background-clip:text; background-clip:text; color:transparent; }
+            .header-actions { display:flex; flex-wrap:wrap; gap:0.5rem; margin-left:auto; align-items:center; }
+            .header-actions input, .header-actions select { padding:0.3rem 0.6rem; border-radius:30px; border:none; background:rgba(255,255,255,0.15); color:white; font-size:0.9rem; }
+            .header-actions input::placeholder { color:rgba(255,255,255,0.6); }
+            .header-actions select option { background:#1a3a5c; color:white; }
+            .header-actions button { background:#2b7be4; color:white; border:none; padding:0.3rem 1rem; border-radius:30px; cursor:pointer; font-weight:500; transition:0.2s; }
+            .header-actions button:hover { background:#1a6ad4; }
+            .admin-badge { font-size:0.7rem; color:#facc15; }
+
+            /* ===== 视频网格 ===== */
+            .gallery-header { display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.8rem; margin:1.5rem 0 1rem; }
+            .video-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(320px,1fr)); gap:1.8rem; padding-bottom:2rem; }
+
+            /* ===== 视频卡片 ===== */
+            .video-card { background:white; border-radius:16px; overflow:hidden; box-shadow:0 4px 12px rgba(0,0,0,0.08); border:1px solid #d4e2f0; transition:0.2s; display:flex; flex-direction:column; }
+            .video-card:hover { transform:translateY(-4px); box-shadow:0 8px 24px rgba(0,0,0,0.12); }
+            .video-wrapper video { width:100%; aspect-ratio:16/9; background:#000; display:block; }
+            .video-body { padding:1rem; flex:1; display:flex; flex-direction:column; }
+            .video-title { font-weight:600; font-size:1.05rem; margin-bottom:0.2rem; }
+            .video-meta { font-size:0.75rem; color:#4a6a8a; margin:0.3rem 0; display:flex; flex-wrap:wrap; gap:0.5rem; }
+            .video-meta .tag { background:#e8f0fe; padding:0.05rem 0.6rem; border-radius:30px; }
+            .video-actions { margin-top:0.6rem; display:flex; gap:0.6rem; flex-wrap:wrap; border-top:1px solid #eef2f6; padding-top:0.6rem; }
+            .btn { background:#e8f0fe; color:#2b7be4; padding:0.2rem 0.8rem; border-radius:40px; font-size:0.75rem; text-decoration:none; display:inline-flex; align-items:center; gap:0.2rem; border:none; cursor:pointer; transition:0.2s; }
+            .btn.download { background:#e8f5e9; color:#2e7d32; }
+            .btn:hover { opacity:0.8; transform:scale(0.96); }
+            .video-notes { margin-top:0.6rem; border-top:1px solid #eef2f6; padding-top:0.5rem; }
+            .video-notes summary { font-size:0.8rem; color:#4a6a8a; cursor:pointer; font-weight:500; }
+            .video-notes textarea { width:100%; margin-top:0.3rem; padding:0.3rem; border-radius:8px; border:1px solid #d4e2f0; font-size:0.8rem; resize:vertical; min-height:50px; }
+            .note-save { background:#2b7be4; color:white; border:none; padding:0.2rem 0.8rem; border-radius:30px; font-size:0.7rem; cursor:pointer; margin-top:0.3rem; }
+
+            /* ===== 管理员面板 ===== */
+            .admin-panel { background:white; border-radius:16px; padding:1.8rem; margin-top:1.5rem; border:1px solid #d4e2f0; }
+            .admin-panel .form-row { display:grid; grid-template-columns:1fr 1fr; gap:1.2rem; }
+            .admin-panel .full { grid-column:1/-1; }
+            .admin-panel label { font-weight:500; font-size:0.85rem; display:block; margin-bottom:0.2rem; color:#1a2a3a; }
+            .admin-panel input, .admin-panel select, .admin-panel textarea { width:100%; padding:0.5rem 0.7rem; border-radius:10px; border:1px solid #d4e2f0; background:white; font-size:0.9rem; }
+            .upload-btn { background:#2b7be4; color:white; padding:0.6rem 2rem; border-radius:40px; border:none; font-weight:600; cursor:pointer; margin-top:0.5rem; transition:0.2s; }
+            .upload-btn:hover { background:#1a6ad4; }
+            .admin-list { margin-top:2rem; border-top:1px solid #eef2f6; padding-top:1rem; }
+            .list-item { display:flex; justify-content:space-between; align-items:center; padding:0.5rem 0; border-bottom:1px solid #f0f4f8; }
+            .list-item .info { flex:1; }
+            .list-item .info .title { font-weight:500; }
+            .list-item .info .sub { font-size:0.7rem; color:#4a6a8a; }
+            .del-btn { background:#fee2e2; color:#b91c1c; border:none; padding:0.2rem 0.8rem; border-radius:40px; cursor:pointer; font-size:0.7rem; transition:0.2s; }
+            .del-btn:hover { background:#b91c1c; color:white; }
+
+            /* ===== 登录弹窗 ===== */
+            .login-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.5); backdrop-filter:blur(4px); display:flex; align-items:center; justify-content:center; z-index:999; }
+            .login-box { background:white; padding:2rem; border-radius:16px; max-width:400px; width:100%; box-shadow:0 20px 60px rgba(0,0,0,0.3); }
+            .login-box h2 { margin-bottom:1rem; }
+            .login-box input { width:100%; padding:0.5rem; border-radius:10px; border:1px solid #d4e2f0; margin-bottom:0.8rem; }
+            .login-box button { background:#2b7be4; color:white; border:none; padding:0.5rem; border-radius:40px; width:100%; font-weight:600; cursor:pointer; transition:0.2s; }
+            .login-box button:hover { background:#1a6ad4; }
+            .login-box .hint { font-size:0.75rem; color:#4a6a8a; margin-top:0.5rem; text-align:center; }
+
+            /* ===== 空状态 ===== */
+            .empty-state { text-align:center; padding:4rem 2rem; color:#4a6a8a; background:white; border-radius:16px; border:1px solid #d4e2f0; }
+            .empty-state .icon { font-size:3rem; margin-bottom:0.5rem; }
+
+            /* ===== 响应式 ===== */
+            @media (max-width:600px) {
+              .video-grid { grid-template-columns:1fr; }
+              .admin-panel .form-row { grid-template-columns:1fr; }
+              .header { flex-direction:column; align-items:stretch; }
+              .header-actions { margin-left:0; justify-content:center; flex-wrap:wrap; }
+            }
+          </style>
+        </head>
+        <body>
+        <div id="app"></div>
+
+        <script>
+          // ============================================================
+          //  前端逻辑 - 单页应用
+          // ============================================================
+
+          const API_BASE = '/api';
+          let videos = [];
+          let isAdmin = false;
+          let currentTab = 'gallery';
+          let searchQuery = '';
+          let categoryFilter = 'all';
+
+          function render() {
+            const app = document.getElementById('app');
+            const isAdminView = (currentTab === 'admin');
+
+            let filtered = videos;
+            if (searchQuery) {
+              filtered = filtered.filter(v => v.title.toLowerCase().includes(searchQuery.toLowerCase()));
+            }
+            if (categoryFilter !== 'all') {
+              filtered = filtered.filter(v => v.category === categoryFilter);
+            }
+
+            app.innerHTML = \`
+              <header class="header">
+                <div class="logo">🎬 <span>视频分享·全球学习</span></div>
+                <div class="header-actions">
+                  \${!isAdminView ? \`
+                    <input type="text" id="searchInput" placeholder="搜索视频..." value="\${searchQuery}" />
+                    <select id="categorySelect">
+                      <option value="all">全部分类</option>
+                      <option value="听力">🎧 听力</option>
+                      <option value="口语">🗣️ 口语</option>
+                      <option value="阅读">📖 阅读</option>
+                      <option value="写作">✍️ 写作</option>
+                      <option value="语法">📐 语法</option>
+                      <option value="其他">📌 其他</option>
+                    </select>
+                    <button id="searchBtn">搜索</button>
+                  \` : ''}
+                  <button id="toggleAdminBtn">\${isAdminView ? '🔙 大厅' : '🔐 管理'}</button>
+                  \${isAdminView && isAdmin ? '<span class="admin-badge">✅ 管理员</span>' : ''}
+                </div>
+              </header>
+
+              <main class="container">
+                \${isAdminView ? renderAdmin() : renderGallery(filtered)}
+              </main>
+            \`;
+
+            if (!isAdminView) {
+              document.getElementById('searchBtn')?.addEventListener('click', () => {
+                searchQuery = document.getElementById('searchInput').value;
+                render();
+              });
+              document.getElementById('searchInput')?.addEventListener('keyup', (e) => {
+                if (e.key === 'Enter') document.getElementById('searchBtn').click();
+              });
+              document.getElementById('categorySelect')?.addEventListener('change', (e) => {
+                categoryFilter = e.target.value;
+                render();
+              });
+            }
+
+            document.getElementById('toggleAdminBtn')?.addEventListener('click', () => {
+              if (currentTab === 'admin') {
+                currentTab = 'gallery';
+                render();
+              } else {
+                if (!isAdmin) {
+                  showLoginModal();
+                } else {
+                  currentTab = 'admin';
+                  render();
+                }
+              }
+            });
+
+            if (isAdminView && isAdmin) {
+              document.getElementById('uploadForm')?.addEventListener('submit', handleUpload);
+              document.querySelectorAll('.del-btn').forEach(btn => {
+                btn.addEventListener('click', () => deleteVideo(btn.dataset.id));
+              });
+            }
+          }
+
+          function renderGallery(filtered) {
+            if (!filtered.length) {
+              return \`<div class="empty-state"><div class="icon">📭</div>\${videos.length ? '没有匹配的视频' : '暂无视频，管理员可上传'}</div>\`;
+            }
+            return \`
+              <div class="gallery-header">
+                <h2>📺 视频大厅</h2>
+                <span style="color:#4a6a8a;font-size:0.85rem;">共 \${filtered.length} 个视频</span>
+              </div>
+              <div class="video-grid">
+                \${filtered.map(v => \`
+                  <div class="video-card" data-id="\${v.id}">
+                    <div class="video-wrapper">
+                      <video controls preload="metadata" src="/uploads/\${v.filename}" onplay="incrementView('\${v.id}')"></video>
+                    </div>
+                    <div class="video-body">
+                      <div class="video-title">\${escapeHtml(v.title)}</div>
+                      <div class="video-meta">
+                        <span class="tag">\${escapeHtml(v.category||'未分类')}</span>
+                        \${v.difficulty ? \`<span class="tag">\${escapeHtml(v.difficulty)}</span>\` : ''}
+                        <span>📅 \${new Date(v.uploadTime).toLocaleString()}</span>
+                        <span>📦 \${formatSize(v.size)}</span>
+                        <span>👁️ \${v.views||0}</span>
+                      </div>
+                      <div class="video-actions">
+                        <a href="/uploads/\${v.filename}" download class="btn download">⬇️ 下载视频</a>
+                      </div>
+                      <div class="video-notes">
+                        <details>
+                          <summary>📝 学习笔记（点击展开）</summary>
+                          <textarea id="note_\${v.id}" rows="2">\${escapeHtml(v.notes||'')}</textarea>
+                          <button class="note-save" onclick="saveNote('\${v.id}')">保存笔记</button>
+                        </details>
+                      </div>
+                    </div>
+                  </div>
+                \`).join('')}
+              </div>
+            \`;
+          }
+
+          function renderAdmin() {
+            if (!isAdmin) {
+              return \`<div style="text-align:center;padding:3rem;"><p style="font-size:1.2rem;">🔒 请先登录管理</p><button id="showLoginBtn" style="background:#2b7be4;color:white;padding:0.5rem 2rem;border-radius:40px;border:none;margin-top:1rem;cursor:pointer;">登录</button></div>\`;
+            }
+            return \`
+              <div class="admin-panel">
+                <h2>📤 上传新视频</h2>
+                <form id="uploadForm">
+                  <div class="form-row">
+                    <div><label>视频标题 *</label><input type="text" id="uploadTitle" required /></div>
+                    <div><label>分类</label>
+                      <select id="uploadCategory">
+                        <option>听力</option><option>口语</option><option>阅读</option>
+                        <option>写作</option><option>语法</option><option>其他</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div class="form-row">
+                    <div><label>难度</label>
+                      <select id="uploadDifficulty">
+                        <option>初级</option><option selected>中级</option><option>高级</option>
+                      </select>
+                    </div>
+                    <div><label>视频文件 *</label><input type="file" id="uploadFile" accept="video/*" required /></div>
+                  </div>
+                  <div class="form-row"><div class="full"><label>描述</label><textarea id="uploadDesc" rows="2"></textarea></div></div>
+                  <button type="submit" class="upload-btn">🚀 上传视频</button>
+                </form>
+
+                <div class="admin-list">
+                  <h3>📂 已上传视频 (\${videos.length})</h3>
+                  \${videos.map(v => \`
+                    <div class="list-item">
+                      <div class="info">
+                        <div class="title">\${escapeHtml(v.title)}</div>
+                        <div class="sub">\${escapeHtml(v.category)} · \${formatSize(v.size)} · \${new Date(v.uploadTime).toLocaleString()}</div>
+                      </div>
+                      <button class="del-btn" data-id="\${v.id}">🗑️ 删除</button>
+                    </div>
+                  \`).join('')}
+                </div>
+              </div>
+            \`;
+          }
+
+          function showLoginModal() {
+            const overlay = document.createElement('div');
+            overlay.className = 'login-overlay';
+            overlay.innerHTML = \`
+              <div class="login-box">
+                <h2>🔐 管理员登录</h2>
+                <input type="password" id="loginPwd" placeholder="请输入密码" />
+                <button id="loginSubmit">登录</button>
+                <div class="hint">默认密码: admin123</div>
+              </div>
+            \`;
+            document.body.appendChild(overlay);
+            overlay.querySelector('#loginSubmit').addEventListener('click', async () => {
+              const pwd = document.getElementById('loginPwd').value;
+              const resp = await fetch('/api/admin/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ password: pwd })
+              });
+              const data = await resp.json();
+              if (data.success) {
+                isAdmin = true;
+                overlay.remove();
+                currentTab = 'admin';
+                render();
+              } else {
+                alert('密码错误');
+              }
+            });
+            overlay.addEventListener('click', (e) => {
+              if (e.target === overlay) overlay.remove();
+            });
+            document.getElementById('loginPwd').addEventListener('keyup', (e) => {
+              if (e.key === 'Enter') overlay.querySelector('#loginSubmit').click();
+            });
+          }
+
+          window.incrementView = async function(id) {
+            try {
+              await fetch(\`/api/videos/\${id}/view\`, { method: 'POST' });
+              const card = document.querySelector(\`.video-card[data-id="\${id}"]\`);
+              if (card) {
+                const viewsSpan = card.querySelector('.video-meta span:last-child');
+                if (viewsSpan) {
+                  const current = parseInt(viewsSpan.textContent.replace('👁️ ','')) || 0;
+                  viewsSpan.textContent = \`👁️ \${current+1}\`;
+                }
+              }
+            } catch(e) {}
+          };
+
+          window.saveNote = async function(id) {
+            const textarea = document.getElementById(\`note_\${id}\`);
+            if (!textarea) return;
+            const notes = textarea.value;
+            try {
+              await fetch(\`/api/videos/\${id}/notes\`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ notes })
+              });
+              alert('✅ 笔记已保存');
+            } catch(e) { alert('保存失败'); }
+          };
+
+          async function deleteVideo(id) {
+            if (!confirm('确定删除这个视频吗？')) return;
+            await fetch(\`/api/videos/\${id}\`, { method: 'DELETE' });
+            await loadVideos();
+            render();
+          }
+
+          async function handleUpload(e) {
+            e.preventDefault();
+            const title = document.getElementById('uploadTitle').value.trim();
+            const category = document.getElementById('uploadCategory').value;
+            const difficulty = document.getElementById('uploadDifficulty').value;
+            const description = document.getElementById('uploadDesc').value.trim();
+            const fileInput = document.getElementById('uploadFile');
+            const file = fileInput.files[0];
+            if (!title || !file) { alert('请填写标题并选择视频文件'); return; }
+            const formData = new FormData();
+            formData.append('title', title);
+            formData.append('category', category);
+            formData.append('difficulty', difficulty);
+            formData.append('description', description);
+            formData.append('video', file);
+            const resp = await fetch('/api/upload', { method: 'POST', body: formData });
+            const data = await resp.json();
+            if (data.success) {
+              alert('上传成功！');
+              document.getElementById('uploadForm').reset();
+              await loadVideos();
+              render();
+            } else {
+              alert('上传失败: ' + (data.error || '未知错误'));
+            }
+          }
+
+          function escapeHtml(str) {
+            if (!str) return '';
+            return String(str).replace(/[&<>"]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'})[m] || m);
+          }
+          function formatSize(bytes) {
+            if (!bytes) return '0 KB';
+            if (bytes < 1024) return bytes + ' B';
+            if (bytes < 1048576) return (bytes/1024).toFixed(1)+' KB';
+            return (bytes/1048576).toFixed(1)+' MB';
+          }
+
+          async function loadVideos() {
+            const resp = await fetch('/api/videos');
+            const data = await resp.json();
+            videos = data;
+          }
+
+          async function init() {
+            await loadVideos();
+            render();
+            if (window.location.hash === '#admin') {
+              currentTab = 'admin';
+              if (!isAdmin) showLoginModal();
+              else render();
+            }
+          }
+          window.addEventListener('hashchange', () => {
+            if (window.location.hash === '#admin') {
+              currentTab = 'admin';
+              if (!isAdmin) showLoginModal();
+              else render();
+            } else {
+              currentTab = 'gallery';
+              render();
+            }
+          });
+          init();
+        </script>
+        </body>
+        </html>`,
+                type: 'html'
+            }
+        };
+
+        // ============================================================
+        //  渲染文件列表 & 下载功能
+        // ============================================================
+
+        const FILE_ICONS = {
+            js: '🟨',
+            json: '📋',
+            env: '🔧',
+            docker: '🐳',
+            yml: '⚙️',
+            conf: '📄',
+            md: '📖',
+            html: '🌐'
+        };
+
+        const FILE_BADGE = {
+            js: 'js',
+            json: 'json',
+            env: 'env',
+            docker: 'docker',
+            yml: 'yml',
+            conf: 'conf',
+            md: 'md',
+            html: 'html'
+        };
+
+        function renderFileList() {
+            const container = document.getElementById('fileList');
+            let html = '';
+            const entries = Object.entries(FILES);
+            const totalSize = entries.reduce((sum, [name, file]) => sum + file.content.length, 0);
+
+            entries.forEach(([name, file]) => {
+                const ext = name.split('.').pop();
+                const icon = FILE_ICONS[ext] || '📄';
+                const badge = FILE_BADGE[ext] || '';
+                const size = (file.content.length / 1024).toFixed(1);
+                html += `
+                    <div class="file-item">
+                        <span class="name">${icon} ${name}</span>
+                        <span>
+                            <span class="badge ${badge}">${ext || 'file'}</span>
+                            <span class="size">${size} KB</span>
+                        </span>
+                    </div>
+                `;
+            });
+
+            container.innerHTML = html;
+            document.querySelector('.count').textContent = `共 ${entries.length} 个文件 · 总计 ${(totalSize / 1024).toFixed(1)} KB`;
+        }
+
+        async function downloadProject() {
+            const btn = document.getElementById('downloadBtn');
+            const status = document.getElementById('status');
+            btn.disabled = true;
+            status.textContent = '⏳ 正在打包...';
+            status.className = 'status';
+
+            try {
+                const zip = new JSZip();
+
+                // 添加所有文件到 ZIP
+                for (const [name, file] of Object.entries(FILES)) {
+                    zip.file(name, file.content);
+                }
+
+                // 生成 ZIP 并下载
+                const blob = await zip.generateAsync({ type: 'blob' });
+                saveAs(blob, 'video-sharing-platform.zip');
+
+                status.textContent = '✅ 下载成功！解压后进入目录，运行 npm install 启动';
+                status.className = 'status success';
+            } catch (err) {
+                console.error(err);
+                status.textContent = '❌ 打包失败: ' + err.message;
+                status.className = 'status error';
+            } finally {
+                btn.disabled = false;
+            }
+        }
+
+        // 页面加载
+        document.addEventListener('DOMContentLoaded', () => {
+            renderFileList();
+            document.getElementById('downloadBtn').addEventListener('click', downloadProject);
+        });
+    </script>
+</body>
+</html>
